@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Upload an image and add a line, rectangle, triangle, or circle.">
+    <title>Shape Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('index') }}" aria-label="Shape Studio home">
+            <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>Shape Studio</span>
+        </a>
+        <span class="header-note">Powered by OpenCV</span>
+    </header>
+
+    <main>
+        <section class="hero">
+            <span class="eyebrow">Simple image editing</span>
+            <h1>Put your ideas<br><em>into shape.</em></h1>
+            <p>Upload an image, choose a shape, make it yours, and download the result in seconds.</p>
+        </section>
+
+        {% if error %}
+            <div class="notice error" role="alert">{{ error }}</div>
+        {% endif %}
+        {% if success_message %}
+            <div class="notice success" role="status">{{ success_message }}</div>
+        {% endif %}
+
+        <section class="workspace">
+            <form method="post" enctype="multipart/form-data" id="editor-form" class="control-panel">
+                <div class="step-heading">
+                    <span>01</span>
+                    <div><h2>Choose your image</h2><p>JPG, PNG, WebP or BMP · max 10 MB</p></div>
+                </div>
+
+                <label class="drop-zone" id="drop-zone" for="image-input">
+                    <input id="image-input" type="file" name="image" accept="image/jpeg,image/png,image/webp,image/bmp" required>
+                    <span class="upload-icon" aria-hidden="true">↑</span>
+                    <strong id="file-title">Drop an image here</strong>
+                    <span id="file-detail">or click to browse your files</span>
+                    <img id="upload-preview" alt="Selected image preview">
+                </label>
+
+                <div class="step-heading settings-heading">
+                    <span>02</span>
+                    <div><h2>Style your shape</h2><p>Pick the shape and customize its look</p></div>
+                </div>
+
+                <fieldset class="shape-picker">
+                    <legend class="sr-only">Select a shape</legend>
+                    {% for value, label, icon in [
+                        ('line', 'Line', '╱'),
+                        ('rectangle', 'Rectangle', '□'),
+                        ('triangle', 'Triangle', '△'),
+                        ('circle', 'Circle', '○')
+                    ] %}
+                        <label class="shape-option">
+                            <input type="radio" name="shape" value="{{ value }}" {% if selected_shape == value %}checked{% endif %}>
+                            <span class="shape-icon">{{ icon }}</span>
+                            <span>{{ label }}</span>
+                        </label>
+                    {% endfor %}
+                </fieldset>
+
+                <div class="settings-grid">
+                    <label class="field color-field">
+                        <span>Color</span>
+                        <span class="color-control">
+                            <input type="color" name="color" value="{{ selected_color }}" aria-label="Shape color">
+                            <output id="color-value">{{ selected_color }}</output>
+                        </span>
+                    </label>
+
+                    <label class="field">
+                        <span>Line thickness <output id="thickness-value">{{ selected_thickness }} px</output></span>
+                        <input type="range" name="thickness" min="1" max="30" value="{{ selected_thickness }}">
+                    </label>
+
+                    <label class="field">
+                        <span>Shape size <output id="size-value">{{ selected_size }}%</output></span>
+                        <input type="range" name="size" min="10" max="45" value="{{ selected_size }}">
+                    </label>
+
+                    <label class="field format-field">
+                        <span>Download format</span>
+                        <select name="format">
+                            <option value="png" {% if selected_format == 'png' %}selected{% endif %}>PNG</option>
+                            <option value="jpg" {% if selected_format == 'jpg' %}selected{% endif %}>JPG</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="toggle-row" id="fill-row">
+                    <span><strong>Fill shape</strong><small>Use a solid color instead of an outline</small></span>
+                    <input type="checkbox" name="filled" {% if filled %}checked{% endif %}>
+                    <i aria-hidden="true"></i>
+                </label>
+
+                <button class="primary-button" type="submit">
+                    <span>Create edited image</span><b aria-hidden="true">→</b>
+                </button>
+            </form>
+
+            <aside class="preview-panel">
+                <div class="preview-heading">
+                    <div><span>03</span><h2>Your result</h2></div>
+                    {% if result_url %}<span class="ready-dot">Ready</span>{% endif %}
+                </div>
+
+                {% if result_url %}
+                    <div class="comparison">
+                        <figure>
+                            <figcaption>Before</figcaption>
+                            <img src="{{ original_image }}" alt="Original uploaded image">
+                        </figure>
+                        <figure class="result-figure">
+                            <figcaption>After</figcaption>
+                            <img src="{{ result_url }}" alt="Image with the selected shape">
+                        </figure>
+                    </div>
+                    <a class="download-button" href="{{ result_url }}?download=1&amp;name={{ download_name|urlencode }}">
+                        <span>Download image</span><b aria-hidden="true">↓</b>
+                    </a>
+                    <a class="start-over" href="{{ url_for('index') }}">Start with another image</a>
+                {% else %}
+                    <div class="empty-preview">
+                        <div class="empty-art" aria-hidden="true">
+                            <span class="mountain"></span><span class="sun"></span><span class="spark">✦</span>
+                        </div>
+                        <h3>Your creation will appear here</h3>
+                        <p>Upload an image and choose your settings to see the finished result.</p>
+                    </div>
+                {% endif %}
+            </aside>
+        </section>
+    </main>
+
+    <footer><span>Shape Studio</span><span>Built with Python + OpenCV</span></footer>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

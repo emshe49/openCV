@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionLab — OpenCV Filter Studio (Day 5)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./static/css/style.css">
+</head>
+<body class="dark-theme">
+    <!-- Background glowing ambient orbs -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <header class="app-header">
+        <div class="brand">
+            <div class="brand-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9" stroke="url(#logo-grad)" stroke-width="2.5"></circle>
+                    <path d="M12 3v6m0 6v6M3 12h6m6 0h6" stroke="url(#logo-grad)" stroke-width="2"></path>
+                    <defs>
+                        <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#00f2fe"/>
+                            <stop offset="100%" stop-color="#4facfe"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <h1>VisionLab <span>Studio</span></h1>
+                <p class="subtitle">OpenCV Day 5 &bull; Gaussian Blur &bull; Median Blur &bull; Sharpening</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <div id="backend-status" class="status-pill status-checking" title="Backend connection status">
+                <span class="status-dot"></span>
+                <span class="status-text">Connecting to OpenCV...</span>
+            </div>
+            <button id="btn-sample-header" class="btn btn-secondary btn-sm">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Load draw.jpg
+            </button>
+            <button id="btn-download" class="btn btn-primary btn-sm" disabled>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Image
+            </button>
+        </div>
+    </header>
+
+    <main class="app-layout">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar-panel">
+            <!-- 1. Upload & Source Card -->
+            <section class="card upload-card">
+                <div class="card-header">
+                    <span class="card-step">01</span>
+                    <h3>Image Source</h3>
+                </div>
+
+                <div id="drop-zone" class="drop-zone">
+                    <input type="file" id="file-input" accept="image/*" class="file-input-hidden">
+                    <div class="drop-zone-content">
+                        <div class="upload-icon-circle">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                        </div>
+                        <p class="drop-text">Drag & drop image here or <span class="highlight">browse</span></p>
+                        <p class="drop-subtext">Supports PNG, JPG, WebP &bull; Max 20MB</p>
+                    </div>
+                </div>
+
+                <div class="sample-row">
+                    <button id="btn-use-sample" class="btn btn-ghost btn-sm">
+                        <span>&plus; Use Sample (draw.jpg)</span>
+                    </button>
+                    <span id="image-meta-pill" class="meta-pill hidden">No Image</span>
+                </div>
+            </section>
+
+            <!-- 2. Filter Operations Selector -->
+            <section class="card filter-card">
+                <div class="card-header">
+                    <span class="card-step">02</span>
+                    <h3>Select Concept</h3>
+                </div>
+
+                <div class="tabs-nav" role="tablist">
+                    <button class="tab-btn active" data-filter="gaussian" id="tab-gaussian" role="tab">
+                        <span class="tab-icon">&#9678;</span>
+                        <span class="tab-title">Gaussian Blur</span>
+                    </button>
+                    <button class="tab-btn" data-filter="median" id="tab-median" role="tab">
+                        <span class="tab-icon">&#9881;</span>
+                        <span class="tab-title">Median Blur</span>
+                    </button>
+                    <button class="tab-btn" data-filter="sharpen" id="tab-sharpen" role="tab">
+                        <span class="tab-icon">&#9733;</span>
+                        <span class="tab-title">Sharpening</span>
+                    </button>
+                </div>
+
+                <!-- 3. Dynamic Filter Parameters -->
+                <div class="filter-controls-container">
+                    <!-- Gaussian Controls -->
+                    <div id="controls-gaussian" class="filter-panel active">
+                        <div class="panel-intro">
+                            <span class="badge badge-cyan">cv2.GaussianBlur</span>
+                            <p>Weighted average with 2D normal distribution. Smooths textures while attenuating high-frequency noise.</p>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="label-row">
+                                <label for="gaussian-ksize">Kernel Size (Odd &times; Odd)</label>
+                                <span class="value-badge" id="gaussian-ksize-val">9 &times; 9</span>
+                            </div>
+                            <input type="range" id="gaussian-ksize" min="1" max="31" step="2" value="9" class="slider">
+                            <div class="slider-marks">
+                                <span>1&times;1</span>
+                                <span>9&times;9 (Lesson)</span>
+                                <span>31&times;31</span>
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="label-row">
+                                <label for="gaussian-sigma">Sigma X (&sigma;)</label>
+                                <span class="value-badge" id="gaussian-sigma-val">2.0</span>
+                            </div>
+                            <input type="range" id="gaussian-sigma" min="0.1" max="10.0" step="0.1" value="2.0" class="slider">
+                            <div class="slider-marks">
+                                <span>0.1 (Subtle)</span>
+                                <span>2.0 (Lesson)</span>
+                                <span>10.0 (Heavy)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Median Controls -->
+                    <div id="controls-median" class="filter-panel">
+                        <div class="panel-intro">
+                            <span class="badge badge-purple">cv2.medianBlur</span>
+                            <p>Non-linear filtering that picks median neighbor value. World-class at removing salt & pepper noise without blurring edges!</p>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="label-row">
+                                <label for="median-ksize">Aperture Linear Size (k)</label>
+                                <span class="value-badge" id="median-ksize-val">11</span>
+                            </div>
+                            <input type="range" id="median-ksize" min="3" max="31" step="2" value="11" class="slider">
+                            <div class="slider-marks">
+                                <span>3</span>
+                                <span>11 (Lesson)</span>
+                                <span>31</span>
+                            </div>
+                        </div>
+
+                        <div class="noise-tip">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            <span>Tip: Median blur must always use an odd integer aperture &gt; 1!</span>
+                        </div>
+                    </div>
+
+                    <!-- Sharpen Controls -->
+                    <div id="controls-sharpen" class="filter-panel">
+                        <div class="panel-intro">
+                            <span class="badge badge-amber">cv2.filter2D</span>
+                            <p>High-pass convolution emphasizing pixel contrast along boundaries, creating razor-sharp clarity.</p>
+                        </div>
+
+                        <div class="control-group">
+                            <label class="group-label">Kernel Preset</label>
+                            <div class="segmented-control">
+                                <button type="button" class="segment-btn active" data-kernel="standard">
+                                    Day 5 Standard (4-Neighbor)
+                                </button>
+                                <button type="button" class="segment-btn" data-kernel="excessive">
+                                    Strong (8-Neighbor)
+                                </button>
+                                <button type="button" class="segment-btn" data-kernel="unsharp">
+                                    Unsharp Mask
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="label-row">
+                                <label for="sharpen-strength">Strength Multiplier</label>
+                                <span class="value-badge" id="sharpen-strength-val">1.0&times;</span>
+                            </div>
+                            <input type="range" id="sharpen-strength" min="0.2" max="3.0" step="0.1" value="1.0" class="slider">
+                            <div class="slider-marks">
+                                <span>0.2&times;</span>
+                                <span>1.0&times; (Lesson)</span>
+                                <span>3.0&times;</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Kernel Matrix Inspector & Code Snippet -->
+                <div class="matrix-card">
+                    <div class="matrix-header">
+                        <span class="matrix-title">OpenCV Code &amp; Kernel</span>
+                        <button id="btn-copy-code" class="copy-btn" title="Copy Python snippet">Copy</button>
+                    </div>
+                    <pre class="code-block"><code id="code-snippet">cv2.GaussianBlur(image, (9, 9), 2)</code></pre>
+                    <div id="matrix-display" class="matrix-grid">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="action-buttons-row">
+                    <button id="btn-apply" class="btn btn-primary btn-glow" disabled>
+                        <span class="btn-spinner hidden"></span>
+                        <span class="btn-text">Apply Filter</span>
+                    </button>
+                    <button id="btn-reset" class="btn btn-secondary" title="Revert to original">
+                        Reset
+                    </button>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Main Viewport Section -->
+        <section class="viewport-panel">
+            <!-- Top Controls Bar -->
+            <div class="viewport-toolbar">
+                <div class="view-modes">
+                    <button class="mode-btn active" data-mode="split" id="mode-split">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                        Split Slider
+                    </button>
+                    <button class="mode-btn" data-mode="side-by-side" id="mode-side">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="9" height="18" rx="1"/><rect x="13" y="3" width="9" height="18" rx="1"/></svg>
+                        Side by Side
+                    </button>
+                    <button class="mode-btn" data-mode="processed" id="mode-processed">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+                        Filtered Only
+                    </button>
+                </div>
+
+                <div class="stats-indicators">
+                    <span id="stat-dims" class="stat-pill">&mdash; &times; &mdash;</span>
+                    <span id="stat-latency" class="stat-pill stat-accent">&mdash; ms</span>
+                </div>
+            </div>
+
+            <!-- Canvas & Image Display Container -->
+            <div class="viewer-container" id="viewer-container">
+                <!-- Empty State Placeholder -->
+                <div id="empty-state" class="empty-state">
+                    <div class="empty-glow-icon">
+                        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="3"/>
+                            <circle cx="8.5" cy="8.5" r="2"/>
+                            <path d="M21 15l-5-5L5 21"/>
+                        </svg>
+                    </div>
+                    <h2>No Image Loaded</h2>
+                    <p>Upload your own picture or load the Day 5 tutorial image to begin experimenting with Gaussian blur, Median blur, and Sharpening.</p>
+                    <div class="empty-actions">
+                        <button id="btn-empty-sample" class="btn btn-primary">
+                            Load draw.jpg Sample
+                        </button>
+                        <button id="btn-empty-upload" class="btn btn-secondary">
+                            Browse Files
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Split View Comparison Mode -->
+                <div id="split-view" class="split-view-wrapper hidden">
+                    <div class="image-wrapper original-wrapper">
+                        <img id="img-original" src="" alt="Original Image">
+                        <span class="view-tag tag-left">ORIGINAL</span>
+                    </div>
+                    <div class="image-wrapper processed-wrapper" id="processed-wrapper">
+                        <img id="img-processed" src="" alt="Processed Image">
+                        <span class="view-tag tag-right">FILTERED</span>
+                    </div>
+                    <!-- Draggable Slider Divider -->
+                    <div class="slider-divider" id="slider-divider">
+                        <div class="slider-handle">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Side By Side View Mode -->
+                <div id="side-by-side-view" class="side-by-side-wrapper hidden">
+                    <div class="side-card">
+                        <div class="side-header">Original</div>
+                        <div class="side-img-box">
+                            <img id="side-img-original" src="" alt="Original">
+                        </div>
+                    </div>
+                    <div class="side-card">
+                        <div class="side-header">Processed (<span id="side-filter-label">Filter</span>)</div>
+                        <div class="side-img-box">
+                            <img id="side-img-processed" src="" alt="Processed">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Single Processed View Mode -->
+                <div id="single-view" class="single-view-wrapper hidden">
+                    <div class="single-img-box">
+                        <img id="single-img-processed" src="" alt="Filtered Result">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Concept Knowledge Deck -->
+            <footer class="concept-cards-strip">
+                <div class="concept-card">
+                    <div class="concept-badge badge-cyan">Gaussian Blur</div>
+                    <h4>cv2.GaussianBlur</h4>
+                    <p>Applies a bell-curve Gaussian kernel. Smooths details smoothly. Used for reducing image noise &amp; background blurring.</p>
+                </div>
+                <div class="concept-card">
+                    <div class="concept-badge badge-purple">Median Blur</div>
+                    <h4>cv2.medianBlur</h4>
+                    <p>Takes the median pixel of neighboring window. Outliers (salt-and-pepper noise) are replaced without eroding sharp edges.</p>
+                </div>
+                <div class="concept-card">
+                    <div class="concept-badge badge-amber">Sharpening</div>
+                    <h4>cv2.filter2D</h4>
+                    <p>Subtracts low-frequencies using Laplacian kernel <code>[[0,-1,0],[-1,5,-1],[0,-1,0]]</code> to boost edge transitions.</p>
+                </div>
+            </footer>
+        </section>
+    </main>
+
+    <!-- Hidden canvas for client-side processing fallback & quick download -->
+    <canvas id="offscreen-canvas" style="display:none;"></canvas>
+
+    <script src="./static/js/app.js"></script>
+</body>
+</html>
